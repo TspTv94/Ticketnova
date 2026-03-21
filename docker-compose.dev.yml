@@ -1,0 +1,31 @@
+# ================================================================
+#  TicketNova — Docker Compose (Development Override)
+#  Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+#  Changes from production:
+#  - Mounts source code as volume (hot-reload via nodemon)
+#  - Exposes backend port 3000 directly for debugging
+#  - Uses NODE_ENV=development
+# ================================================================
+
+version: '3.9'
+
+services:
+  app:
+    build:
+      target: builder        # Use builder stage (has devDependencies)
+    container_name: ticketnova-app-dev
+    command: ["npx", "nodemon", "server.js"]
+    ports:
+      - "3000:3000"          # Expose directly for Postman / curl testing
+    volumes:
+      - ./backend:/app:delegated        # Live reload backend
+      - ./frontend:/app/frontend:ro     # Live reload frontend
+      - /app/node_modules               # Prevent overwriting container's node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+
+  nginx:
+    ports:
+      - "8080:80"            # Use port 8080 in dev to avoid conflicts
