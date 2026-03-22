@@ -1,5 +1,5 @@
 resource "aws_instance" "jenkins_server" {
-  ami                         = data.aws_ami.ubuntu.id
+  ami                         = "ami-095cc90aa5ddff518"
   instance_type               = var.jenkins_instance_type
   subnet_id                   = aws_subnet.public_subnet.id
   vpc_security_group_ids      = [aws_security_group.jenkins_sg.id]
@@ -15,6 +15,10 @@ resource "aws_instance" "jenkins_server" {
     usermod -aG docker ubuntu
   USERDATA
 
+  lifecycle {
+    ignore_changes = [ami, user_data]
+  }
+
   tags = {
     Name    = "${var.project_name}-jenkins-server"
     Project = var.project_name
@@ -24,8 +28,4 @@ resource "aws_instance" "jenkins_server" {
 
 output "jenkins_server_public_ip" {
   value = aws_instance.jenkins_server.public_ip
-}
-
-output "jenkins_url" {
-  value = "http://${aws_instance.jenkins_server.public_ip}:8080"
 }
