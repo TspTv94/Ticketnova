@@ -1,0 +1,51 @@
+---
+- name: Setup App Server
+  hosts: app
+  become: yes
+
+  tasks:
+    - name: Update apt packages
+      apt:
+        update_cache: yes
+
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Start Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Install Git
+      apt:
+        name: git
+        state: present
+
+    - name: Install AWS CLI dependencies
+      apt:
+        name:
+          - curl
+          - unzip
+        state: present
+
+    - name: Download AWS CLI
+      shell: curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+
+    - name: Unzip AWS CLI
+      shell: unzip -o /tmp/awscliv2.zip -d /tmp/
+
+    - name: Install AWS CLI
+      shell: /tmp/aws/install --update
+
+    - name: Print setup complete
+      debug:
+        msg: "App server is ready for deployment!"

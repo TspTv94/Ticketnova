@@ -1,0 +1,133 @@
+---
+- name: Install Jenkins on Jenkins Server
+  hosts: jenkins
+  become: yes
+
+  tasks:
+    - name: Remove any broken Jenkins repo
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/sources.list.d/jenkins.list
+        - /usr/share/keyrings/jenkins-keyring.gpg
+        - /usr/share/keyrings/jenkins-keyring.asc
+
+    - name: Update apt
+      apt:
+        update_cache: yes
+
+    - name: Install dependencies
+      apt:
+        name:
+          - openjdk-17-jdk
+          - curl
+          - unzip
+          - git
+          - docker.io
+          - fontconfig
+        state: present
+
+    - name: Create jenkins user
+      user:
+        name: jenkins
+        system: yes
+        home: /var/lib/jenkins
+        shell: /bin/bash
+        createhome: yes
+
+    - name: Create all Jenkins directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: jenkins
+        group: jenkins
+        mode: '0755'
+      loop:
+        - /var/lib/jenkins
+        - /var/log/jenkins
+        - /var/cache/jenkins
+        - /usr/share/jenkins
+
+    - name: Download Jenkins war file
+      get_url:
+        url: https://mirrors.jenkins.io/war-stable/latest/jenkins.war
+        dest: /usr/share/jenkins/jenkins.war
+        owner: jenkins
+        group: jenkins
+        mode: '0644'
+        timeout: 120
+
+    - name: Create Jenkins systemd service
+      copy:
+        dest: /etc/systemd/system/jenkins.service
+        content: |
+          [Unit]
+          Description=Jenkins Automation Server
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=jenkins
+          Environment="JENKINS_HOME=/var/lib/jenkins"
+          Environment="JAVA_OPTS=-Djava.awt.headless=true"
+          ExecStart=/usr/bin/java -jar /usr/share/jenkins/jenkins.war --httpPort=8080
+          Restart=on-failure
+          RestartSec=10
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: Start Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add jenkins to docker group
+      user:
+        name: jenkins
+        groups: docker
+        append: yes
+
+    - name: Start Jenkins
+      service:
+        name: jenkins
+        state: started
+        enabled: yes
+
+    - name: Download AWS CLI
+      get_url:
+        url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+        dest: /tmp/awscliv2.zip
+
+    - name: Unzip AWS CLI
+      unarchive:
+        src: /tmp/awscliv2.zip
+        dest: /tmp/
+        remote_src: yes
+
+    - name: Install AWS CLI
+      shell: /tmp/aws/install --update
+
+    - name: Wait for Jenkins to start on port 8080
+      wait_for:
+        host: 0.0.0.0
+        port: 8080
+        delay: 30
+        timeout: 180
+
+    - name: Get Jenkins initial password
+      command: cat /var/lib/jenkins/secrets/initialAdminPassword
+      register: jenkins_password
+      retries: 10
+      delay: 15
+      until: jenkins_password.rc == 0
+
+    - name: Show Jenkins password
+      debug:
+        msg: "Jenkins Initial Password: {{ jenkins_password.stdout }}"
