@@ -35,13 +35,10 @@ app.use('/api/events',   eventsRouter);
 app.use('/api/bookings', bookingsRouter);
 app.get('/api/stats',    getStats);
 
-const frontendPath = path.join(__dirname, '../../frontend');
-console.log('Frontend path:', frontendPath);
-
-app.use(express.static(frontendPath));
+app.use(express.static('/app/frontend'));
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
+  res.sendFile('/app/frontend/index.html');
 });
 
 app.use(notFound);
