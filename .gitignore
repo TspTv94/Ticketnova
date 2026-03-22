@@ -32,3 +32,8 @@ ansible/inventory.ini
 
 # Docker
 .dockerignore
+.vscode/
+aws/
+awscliv2.zip
+y
+ansible/{
