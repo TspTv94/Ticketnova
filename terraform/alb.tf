@@ -104,3 +104,16 @@ output "app_load_balancer_url" {
   value       = "http://${aws_lb.ticketnova.dns_name}"
   description = "Application Load Balancer URL"
 }
+
+resource "aws_lb_listener" "ticketnova_https" {
+  load_balancer_arn = aws_lb.ticketnova.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = "arn:aws:acm:ap-south-1:434748505869:certificate/eaf4f4d3-8dc8-4d93-bcc1-8fb206e8625b"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.ticketnova.arn
+  }
+}
